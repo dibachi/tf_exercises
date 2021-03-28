@@ -1,11 +1,14 @@
 import tensorflow as tf 
 import numpy as np 
+import matplotlib.pyplot as plt 
+
 rng = np.random 
 
 #Parameters
 learning_rate = 0.01
 training_steps = 1000
 display_step = 50
+num_frames = int(training_steps/display_step)
 
 #training data
 X = np.array([3.3,4.4,5.5,6.71,6.93,4.168,9.779,6.182,7.59,2.167,
@@ -44,11 +47,9 @@ for step in range(1, training_steps + 1):
     if step % display_step == 0:
         pred = linear_regression(X)
         loss = mean_square(pred, Y)
+        plt.plot(X, np.array(W*X + b), label='Fitted line')
         print("step: %i, loss: %f, W: %f, b:%f" % (step, loss, W.numpy(), b.numpy()))
 
-import matplotlib.pyplot as plt 
-
 plt.plot(X, Y, 'ro', label='Original Data')
-plt.plot(X, np.array(W*X + b), label='Fitted line')
 plt.legend()
 plt.show()
