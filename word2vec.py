@@ -12,16 +12,16 @@ import zipfile
 import numpy as np 
 import tensorflow as tf 
 
+processor = '/gpu:3'
 learning_rate = 0.1
 batch_size = 128
-#3000000
 num_steps = 30000
-#10000
 display_step = 100
-#200000
 eval_step = 2000
 
-# Evaluation Parameters. strings need to be encoded to bytes since tensorflow sucks
+# set up a list of words to do association with. the list needs to be encoded
+# from strings to byte arrays since that's what tensorflow works with when 
+# you store strings in tensors
 eval_words = ['five', 'of', 'going', 'hardware', 'american', 'britain']
 eval_words = [z.encode() for z in eval_words]
 
@@ -36,6 +36,7 @@ num_sampled = 64 # Number of negative examples to sample.
 # Download a small chunk of Wikipedia articles collection.
 url = 'http://mattmahoney.net/dc/text8.zip'
 data_path = 'text8.zip'
+#if you haven't downloaded data, download into path
 if not os.path.exists(data_path):
     print("Downloading the dataset... (It may take some time)")
     filename, _ = urllib.request.urlretrieve(url, data_path)
@@ -57,10 +58,10 @@ for i in range(len(count) - 1, -1, -1):
         break
 # Compute the vocabulary size.
 vocabulary_size = len(count)
-# Assign an id to each word.
+# Assign an id to each word. note that the 'word' is actually a byte array 
+# since tf processes and stores the data in 'count' this way
 word2id = dict()
 for i, (word, _)in enumerate(count):
-    # word = word.decode('utf-8')
     word2id[word] = i
 
 
@@ -68,12 +69,12 @@ data = list()
 unk_count = 0
 for word in text_words:
     # Retrieve a word id, or assign it index 0 ('UNK') if not in dictionary.
-    # word = word.decode('utf-8')
     index = word2id.get(word, 0)
     if index == 0:
         unk_count += 1
     data.append(index)
 count[0] = ('UNK', unk_count)
+#just a backwards dictionary for word2id(?)
 id2word = dict(zip(word2id.values(), word2id.keys()))
 
 print("Words count:", len(text_words))
@@ -114,7 +115,7 @@ def next_batch(batch_size, num_skips, skip_window):
 
 # Ensure the following ops & var are assigned on CPU
 # (some ops are not compatible on GPU).
-with tf.device('/cpu:0'):
+with tf.device(processor):
     # Create the embedding variable (each row represent a word embedding vector).
     embedding = tf.Variable(tf.random.normal([vocabulary_size, embedding_size]))
     # Construct the variables for the NCE loss.
@@ -122,13 +123,13 @@ with tf.device('/cpu:0'):
     nce_biases = tf.Variable(tf.zeros([vocabulary_size]))
 
 def get_embedding(x):
-    with tf.device('/cpu:0'):
+    with tf.device(processor):
         # Lookup the corresponding embedding vectors for each sample in X.
         x_embed = tf.nn.embedding_lookup(embedding, x)
         return x_embed
 
 def nce_loss(x_embed, y):
-    with tf.device('/cpu:0'):
+    with tf.device(processor):
         # Compute the average NCE loss for the batch.
         y = tf.cast(y, tf.int64)
         loss = tf.reduce_mean(
@@ -142,7 +143,7 @@ def nce_loss(x_embed, y):
 
 # Evaluation.
 def evaluate(x_embed):
-    with tf.device('/cpu:0'):
+    with tf.device(processor):
         # Compute the cosine similarity between input data embedding and every embedding vectors
         x_embed = tf.cast(x_embed, tf.float32)
         x_embed_norm = x_embed / tf.sqrt(tf.reduce_sum(tf.square(x_embed)))
@@ -155,7 +156,7 @@ optimizer = tf.optimizers.SGD(learning_rate)
 
 # Optimization process. 
 def run_optimization(x, y):
-    with tf.device('/cpu:0'):
+    with tf.device(processor):
         # Wrap computation inside a GradientTape for automatic differentiation.
         with tf.GradientTape() as g:
             emb = get_embedding(x)
