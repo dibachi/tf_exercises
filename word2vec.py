@@ -12,7 +12,7 @@ import zipfile
 import numpy as np 
 import tensorflow as tf 
 
-processor = '/gpu:3'
+processor = '/gpu:0'
 learning_rate = 0.1
 batch_size = 128
 num_steps = 30000
@@ -115,6 +115,7 @@ def next_batch(batch_size, num_skips, skip_window):
 
 # Ensure the following ops & var are assigned on CPU
 # (some ops are not compatible on GPU).
+# tf.debugging.set_log_device_placement(True)
 with tf.device(processor):
     # Create the embedding variable (each row represent a word embedding vector).
     embedding = tf.Variable(tf.random.normal([vocabulary_size, embedding_size]))
