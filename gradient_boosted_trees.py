@@ -39,7 +39,7 @@ l2_regul = 0.1
 num_batches_per_layer = 1000
 num_trees = 10
 max_depth = 4
-
+print("Made it here 0 \n")
 from tensorflow.keras.datasets import boston_housing
 (x_train, y_train), (x_test, y_test) = boston_housing.load_data()
 
@@ -52,6 +52,63 @@ def to_binary_class(y):
             y[i] = 0
     return y
 
+## GBDT CLASSIFIER
+#convert y data from continuous regression to discrete classification data
 y_train_binary = to_binary_class(copy.deepcopy(y_train))
 y_test_binary = to_binary_class(copy.deepcopy(y_test))
-
+print("Made it here 1 \n")
+#build the input function
+train_input_fn = tf.data.numpy_input_fn(
+    x={'x':x_train}, y=y_train_binary, batch_size=batch_size, 
+    num_epochs=None, shuffle=True
+)
+test_input_fn = tf.data.numpy_input_fn(
+    x={'x': x_test}, y=y_test_binary,batch_size=batch_size, 
+    num_epochs=1, shuffle=False
+)
+test_train_input_fn = tf.data.numpy_input_fn(
+    x={'x': x_train}, y=y_train_binary, batch_size=batch_size, 
+    num_epochs=1, shuffle=False
+)
+print("Made it here 2 \n")
+#GBDT models from tf estimator requires 'feature_column' data format
+feature_columns = [tf.feature_column.numeric_column(key='x', shape=(num_features,))]
+print("Made it here 3 \n")
+gbdt_classifier = tf.estimator.BoostedTreesClassifier(
+    n_batches_per_layer=num_batches_per_layer,
+    feature_columns=feature_columns, 
+    n_classes=num_classes,
+    learning_rate=learning_rate, 
+    n_trees=num_trees,
+    max_depth=max_depth,
+    l1_regularization=l1_regul, 
+    l2_regularization=l2_regul
+)
+print("Made it here 4 \n")
+gbdt_classifier.train(train_input_fn, max_steps=max_steps)
+gbdt_classifier.evaluate(test_train_input_fn)
+gbdt_classifier.evaluate(test_input_fn)
+print("Made it here 5 \n")
+## GBDT REGRESSOR
+train_input_fn = tf.estimator.inputs.numpy_input_fn(
+    x={'x': x_train}, y=y_train,
+    batch_size=batch_size, num_epochs=None, shuffle=True)
+test_input_fn = tf.estimator.inputs.numpy_input_fn(
+    x={'x': x_test}, y=y_test,
+    batch_size=batch_size, num_epochs=1, shuffle=False)
+# GBDT Models from TF Estimator requires 'feature_column' data format.
+feature_columns = [tf.feature_column.numeric_column(key='x', shape=(num_features,))]
+print("Made it here 6 \n")
+gbdt_regressor = tf.estimator.BoostedTreesRegressor(
+    n_batches_per_layer=num_batches_per_layer,
+    feature_columns=feature_columns, 
+    learning_rate=learning_rate, 
+    n_trees=num_trees,
+    max_depth=max_depth,
+    l1_regularization=l1_regul, 
+    l2_regularization=l2_regul
+)
+print("Made it here 7 \n")
+gbdt_regressor.train(train_input_fn, max_steps=max_steps)
+gbdt_regressor.evaluate(test_input_fn)
+print("Made it here final \n")
